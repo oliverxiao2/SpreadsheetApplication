@@ -1,7 +1,7 @@
 /*jshint -W030 */   // Expected an assignment or function call and instead saw an expression (a && a.fun1())
 /*jshint -W004 */   // {a} is already defined (can use let instead of var in es6)
-(function(){
-window.spreadNS = GC.Spread.Sheets;
+
+var spreadNS = GC.Spread.Sheets;
 var DataValidation = spreadNS.DataValidation;
 var ConditionalFormatting = spreadNS.ConditionalFormatting;
 var ComparisonOperators = ConditionalFormatting.ComparisonOperators;
@@ -8615,6 +8615,12 @@ ipcRenderer.on('cancel', () => {
 ipcRenderer.on('create-new-excel-window-success', function (event, param) {
     console.log(event, param)
 });
+ipcRenderer.on('selected-dir-to-save', function (event, param) {
+    if (AppNS.readyToWrite) {
+        fs.writeFileSync(param, AppNS.readyToWrite, {encoding: 'UTF-8'});
+        AppNS.readyToWrite = '';
+    }
+})
 
 var cardHtmlTemplate = 
     `<div class="insp-row" data-DID="@ID@" draggable="true" ondragstart="event.dataTransfer.setData('DID', '@ID@')">                                         
@@ -8791,58 +8797,59 @@ function runDatasetCheck () {
             if ($(this).hasClass('selected')) {
                 const datasetId = this.parentElement.getAttribute('data-did');
                 const dataset = AppNS.datasets.search(datasetId);
+                let sheet = srcDataset.DTCListSheet; 
+                const defaultLayout = {
+                    c1: 2,
+                    cCount: 7, 
+                    keyColumnIndex: 3,
+                    keyFromRow: 3,
+                    keyToRow: sheet.getRowCount()-3,
+                    fieldColumnIndex: {
+                        DTCO: 4,
+                        FaultTyp: 5,
+                        DFESCls: 6,
+                        CtlMsk: 7,
+                        DisblMsk: 8,
+                    },                           
+                };
+
+                let dd, layout, recordname = '', recordInDD, cell, cellVal;
+                layout = sheet.sheetLayout || defaultLayout;
+                sheet.sheetLayout = layout;
 
                 if (dataset.type === 'A2LHEX') {
+                    dd = DSM.getDFCTable(dataset.data);
 
                 } else if (dataset.type === 'EXCEL') {
-                    const dd = dataset.data[0];
-                    let sheet = srcDataset.DTCListSheet; 
-                    if (sheet) {
-                        const defaultLayout = {
-                            c1: 2,
-                            cCount: 7, 
-                            keyColumnIndex: 3,
-                            keyFromRow: 3,
-                            keyToRow: sheet.getRowCount()-3,
-                            fieldColumnIndex: {
-                                DTCO: 4,
-                                FaultTyp: 5,
-                                DFESCls: 6,
-                                CtlMsk: 7,
-                                DisblMsk: 8,
-                            },                           
-                        };
-                        let layout, recordname = '', recordInDD, cell, cellVal;
-
-                        if (sheet.sheetLayout) layout = sheet.sheetLayout;
-                        else layout = sheet.sheetLayout = defaultLayout;
-
-                        spread.suspendPaint();
-                        sheet.comments.clear();
-                        for (let i = layout.keyFromRow; i <= layout.keyToRow; i++) {
-                            recordname = sheet.getText(i, layout.keyColumnIndex);
-                            recordInDD = dd[recordname]; 
-                            if (recordInDD) {
-                                for (const field in layout.fieldColumnIndex) {
-                                    cell = sheet.getCell(i, layout.fieldColumnIndex[field]);
-                                    cellVal = cell.text().toUpperCase();
-                                    if (cellVal != (''+recordInDD[field]).toUpperCase()) {
-                                        sheet.comments.add(i, layout.fieldColumnIndex[field], dataset.name+'\n'+recordInDD[field]);
-                                        cell.foreColor('red');
-                                        sheet.setTag(i, layout.fieldColumnIndex[field],'Different');
-                                        cell.backColor('#ffcbc7');
-                                    }
-                                }
-                            } else {
-                                'Not Found in Desination Dataset';
-                                sheet.getRange(i, layout.c1, 1, layout.cCount).backColor('#eeeeee');
-                            }
-                            
-                        }
-
-                        spread.resumePaint();
-                    }
+                    dd = dataset.data[0];
                 }
+
+                if (sheet) {
+                    spread.suspendPaint();
+                    sheet.comments.clear();
+                    for (let i = layout.keyFromRow; i <= layout.keyToRow; i++) {
+                        recordname = sheet.getText(i, layout.keyColumnIndex).toUpperCase();
+                        recordInDD = dd[recordname]; 
+                        if (recordInDD) {
+                            for (const field in layout.fieldColumnIndex) {
+                                cell = sheet.getCell(i, layout.fieldColumnIndex[field]);
+                                cellVal = cell.text().toUpperCase();
+                                if (cellVal != (''+recordInDD[field]).toUpperCase()) {
+                                    sheet.comments.add(i, layout.fieldColumnIndex[field], dataset.name+'\n'+recordInDD[field]);
+                                    cell.foreColor('red');
+                                    sheet.setTag(i, layout.fieldColumnIndex[field],'Different');
+                                    cell.backColor('#ffcbc7');
+                                }
+                            }
+                        } else {
+                            'Not Found in Desination Dataset';
+                            sheet.getRange(i, layout.c1, 1, layout.cCount).backColor('#eeeeee');
+                        }
+                        
+                    }
+
+                    spread.resumePaint();
+                }               
             }
         })
     } else if (action === 'Copy') {
@@ -8887,11 +8894,13 @@ function cheboxBoxTypeBtnClickHandler (event, $btn) {
 };
 
 function attachToolbarItemEvents () {
+    const EVENTHANDLERS = require('./events/events');
     // ***** Tab - Main *****
     // ***** Import - A2L/HEX *****
     $('#ribbon-btn-import-a2l-hex').click(() => {ipcRenderer.send('open-a2l', 'single'); });
     // ***** Import - XML *****
     // ***** Import - DCM *****
+    $('#ribbon-btn-import-dcm').click()
     // ***** Import - EXCEL *****
     $('#ribbon-btn-import-excel').click(()=>{$('#input-file-excel').click();});
     $('#input-file-excel').change(function (e) {
@@ -8971,6 +8980,7 @@ function attachToolbarItemEvents () {
     // ***** Export - EXCEL *****
     $('#ribbon-btn-export-as-excel').click(exportToExcel);
     // ***** Export - DCM *****
+    $('#ribbon-btn-export-as-dcm').click(exportCurrentSheetToDCM);
     // ***** Panels - Property Panel *****
     $('#ribbon-btn-toggle-sheet-props-panel').click(toggleInspector);
     // ***** Panels - Datasets Panel *****
@@ -9202,9 +9212,59 @@ function attachToolbarItemEvents () {
     console.log(license);
     
 };
-
-
 //ribbon menubar events handlers (end)
+function exportCurrentSheetToDCM () {
+    const sheet = spread.getActiveSheet();
+    const a2l = AppNS.sourceDataset.data;
+    const out = {};
+    if (sheet.type === 'DFC List') {
+        const layout = sheet.sheetLayout;
+        if (layout) {
+            let name, key, func, value, keyCol;
+            for (let row = layout.keyFromRow; row <= layout.keyToRow; row++) {
+                keyCol = layout.keyColumnIndex;
+                name = sheet.getCell(row, keyCol).text();
+                for (const field in layout.fieldColumnIndex) {
+                    switch (field) {
+                        case 'DTCO':
+                            key = 'DFES_DTCO.DFC_' + name +'_C';
+                            value = DSM.calcDTCO(sheet.getCell(row, layout.fieldColumnIndex[field]).text());
+                            func = 'DFES';
+                            break;
+                        case 'FaultTyp':
+                            key = 'DFES_FaultTyp.DFC_' + name + '_C';
+                            value = parseInt('0x' + sheet.getCell(row, layout.fieldColumnIndex[field]).text());
+                            func = 'DFES';
+                            break;
+                        case 'DFESCls':
+                            key = 'DFES_Cls.DFC_' + name + '_C';
+                            value = parseInt(sheet.getCell(row, layout.fieldColumnIndex[field]).value());
+                            func = 'DFES';
+                            break;
+                        case 'CtlMsk':
+                            key = 'DFC_CtlMsk.DFC_' + name + '_C';
+                            value = parseInt(sheet.getCell(row, layout.fieldColumnIndex[field]).value());
+                            func = 'DFC';
+                            break;
+                        case 'DisblMsk':
+                            key = 'DFC_DisblMsk.DFC_' + name + '_C';
+                            value = parseInt(sheet.getCell(row, layout.fieldColumnIndex[field]).value());
+                            func = 'DFC';
+                            break;
+                    }
+                    out[key] = {
+                        value: value,
+                        belongToFunction: func,
+                        };
+                }
+            }
+        }
+        AppNS.readyToWrite = a2l.exportDSMInfoToDCM(out);       
+        ipcRenderer.send('select-save-dir');
+    }
+};
+
+
 
 function listDFCWorksheetInNewSheet (_sheetname, _DFCInfoList, fields) {
     const names = Object.keys(_DFCInfoList).sort();
@@ -9216,6 +9276,27 @@ function listDFCWorksheetInNewSheet (_sheetname, _DFCInfoList, fields) {
           packLen = 60;
     
     const sheet = addSheet(_sheetname, maxRowCount, maxColCount, true);
+
+    const layout = {
+        c1: 2,
+        cCount: 7, 
+        keyColumnIndex: 3,
+        keyFromRow: 3,
+        keyToRow: sheet.getRowCount()-3,
+        fieldColumnIndex: {
+            DTCO: 4,
+            FaultTyp: 5,
+            DFESCls: 6,
+            CtlMsk: 7,
+            DisblMsk: 8,
+        },                           
+    };
+
+    for (const [i, field] of fields.entries()) {
+        layout.fieldColumnIndex[field.prop] = layout.keyColumnIndex + i + 1;
+    }
+    sheet.sheetLayout = layout;
+
     let name = '', DFC, cellVal, packDataList = [], packDataRow;
 
     sheet.type = 'DFC List';
@@ -9409,4 +9490,3 @@ function updateLabelCheckIconState () {
     }
 };
 
-})();
