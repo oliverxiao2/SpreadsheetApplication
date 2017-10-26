@@ -29,6 +29,11 @@ const DFCNamingRules = {
 
 };
 
+function getDFCTable (a2l) {
+    const c = a2l.CHARACTERISTIC;
+    const p = a2l.getPlatform();
+}
+
 function getDFCTable (_a2lDataset) {
     const a = _a2lDataset,
           c = a.CHARACTERISTIC,
@@ -82,31 +87,45 @@ function getLabelOfDFCRelated (a2l, _DFCname, _labelname) {
 };
 
 function calcDTCO (int) {
-    if (int >= 0 && int < 0x10000) {
-        const hexStr = (int + 0x10000).toString(16);
-        const i = parseInt(hexStr[1], 16);
-    
-        if (i <= 0x3) {
-            return 'P' + (int - 0x0000 + 0x10000).toString(16).substr(1).toUpperCase();
-        } else if (i <= 0x7) {
-            return 'C' + (int - 0x4000 + 0x10000).toString(16).substr(1).toUpperCase();
-        } else if (i <= 0xB) {
-            return 'B' + (int - 0x8000 + 0x10000).toString(16).substr(1).toUpperCase();
-        } else {
-            return 'U' + (int - 0xC000 + 0x10000).toString(16).substr(1).toUpperCase();
+    if (typeof int === 'number'){
+        // 1234 => PXXXX
+        if (int >= 0 && int < 0x10000) {
+            const hexStr = (int + 0x10000).toString(16);
+            const i = parseInt(hexStr[1], 16);
+        
+            if (i <= 0x3) {
+                return 'P' + (int - 0x0000 + 0x10000).toString(16).substr(1).toUpperCase();
+            } else if (i <= 0x7) {
+                return 'C' + (int - 0x4000 + 0x10000).toString(16).substr(1).toUpperCase();
+            } else if (i <= 0xB) {
+                return 'B' + (int - 0x8000 + 0x10000).toString(16).substr(1).toUpperCase();
+            } else {
+                return 'U' + (int - 0xC000 + 0x10000).toString(16).substr(1).toUpperCase();
+            }
         }
-    }
-    
-    return '-';
+        
+        return '-';
+    } else if (typeof int === 'string') {
+        const I = int[0].toUpperCase();
+        let k;
+        if (I === 'P') k = 0;
+        else if (I === 'C') k = 0x4000;
+        else if (I === 'B') k = 0x8000;
+        else if (I === 'U') k = 0xC000;
+
+        return (k + parseInt('0x' + int.substr(1)));
+    }   
 };
+
 
 function calcFaultTyp (int) {
     if (int < 0x100 && int >= 0) {
-        return (int+0x100).toString(16).substr(1);
+        return (int+0x100).toString(16).substr(1).toUpperCase();
     } else return '-';
     
-}
+};
 
 module.exports = {
-    getDFCTable
+    getDFCTable,
+    calcDTCO,
 }
