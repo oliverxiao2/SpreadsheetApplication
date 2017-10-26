@@ -5,9 +5,6 @@
 *
 *
 ***********************************************************************************/
-
-
-
 class A2L {
 	constructor (a2lFilePath) {
 	  this.path = a2lFilePath;    
@@ -665,6 +662,41 @@ class A2L {
     }
 
     return NaN;
+  }
+
+  getPlatform () {
+    const _m = this.path.match(/(\w+)\.a2l$/i);
+    const filename = _m && _m[1];
+    if (filename) {
+      const I = filename[0].toUpperCase();
+      switch (I) {
+        case 'E': return '17810.1';
+        case 'D': return '17810';
+        case 'F': return 'UP6 UP6D';
+        case 'U': return 'ME1788';
+      }
+    }
+  }
+
+  exportDSMInfoToDCM (objectList) {
+    let string = 'KONSERVIERUNG_FORMAT 2.0\r\n';
+    const template1 = '\r\nFESTWERT {$label$}' + '\r\n'
+      + '\tFUNKTION {$function$}' + '\r\n'
+      + '\tWERT {$value$}' + '\r\n'
+      + 'END' + '\r\n'; 
+
+    if (objectList && typeof objectList === 'object') {
+      for (const name in objectList) {
+        let _s = template1;
+        _s = _s.replace('{$label$}', name)
+            .replace('{$function$}', objectList[name].belongToFunction)
+            .replace('{$value$}', objectList[name].value);
+        
+        string += _s;
+      }
+    }
+    
+    return string;
   }
 }
 
