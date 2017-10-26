@@ -733,6 +733,114 @@ class HEX {
   }
 }
 
+class DCM {
+  constructor (dcmFilePath) {
+    const text = require('fs').readFileSync(dcmFilePath, 'utf-8');
+    return init(text);
+
+    function init (text) {
+      const out = {count: 0};
+      let cls = 0, key = '', keywordType = '',  valArray, currentNode = out, tokens = [], state = 'idle', element;
+      let keywords = {
+        element:[
+          'FUNKTIONEN',                   // funct. definition
+          'VARIANTENKODIERUNG KRITERIUM', // variant coding
+          'MODULKOPF',                    // module header
+          'FESTWERT',                     // parameter
+          'FESTWERTEBLOCK'                // function array or matrix
+        ],
+        value: ['TEXT', 'WERT']
+      }
+  
+      if (text){
+        let lines = text.split(/\n/);
+        if (lines){
+          for (const [i, _line_] of lines.entries()){
+            let line = _line_.replace(/(^\s+)|(\s+$)/g, '');
+            if (line){
+              // real work starts here!
+              tokens = line.split(/\s+/);
+              if (tokens && tokens.length >= 1){
+  
+                key = tokens[0].toUpperCase();
+                keywordType = getKeywordType(key, keywords);
+  
+                // case 0: meet a new element, init it!
+                if (keywordType == 'element'){
+                  out.count = out.count + 1;
+                  if (out[key] == undefined) out[key] = {};
+                  currentNode = out[key];
+                  initElement(key, tokens.slice(1), currentNode);
+                  state = 'read';
+  
+                // case 1: leave the element
+                } else if (key == 'END'){
+                  state = 'idle';
+                  currentNode = out;
+                }
+  
+                // case 2: entered a new element, read keyword and value
+                else if (state == 'read'){
+                  switch (keywordType) {
+                    case 'value':
+                      if (currentNode.type == 'FESTWERTEBLOCK'){
+                        valArray = [];
+                        tokens.slice(1).forEach(function(str){
+                          let r = str.match(/^\"([\s\S]*?)\"$/);
+                          if (r) valArray.push(r[1]);
+                          else valArray.push(str);
+                        });
+                        if (!currentNode[key]) currentNode[key] = [];
+                        currentNode[key] = currentNode[key].concat(valArray);
+                      } else if (currentNode.type === 'FESTWERT') {
+                        currentNode[key] = tokens[1];
+                      }
+                      break;
+                    case 'other':
+                      currentNode[key] = removeQuotes(tokens[1]);
+                      break;
+                    default: break;
+                  }
+                }
+              }
+            }
+          }
+          return out;
+        }
+      }
+      function initElement(key, tokens, node){
+        currentNode = (node[tokens[0]] = {type:key});
+  
+        if (key == 'FESTWERTEBLOCK'){
+          if (tokens.length == 1) {currentNode.size_x = tokens[1];}
+          if (tokens.length == 3) {currentNode.size_x = tokens[1]; currentNode.size_y = tokens[2];}
+        } else if (key == 'FESTWERT'){
+          // ==================
+        } else if (key == 'FUNKTIONEN'){
+          // ==================
+        }
+  
+      }
+      function getKeywordType(key, lib){
+        if (key && lib){
+          let types = Object.keys(lib);
+          for (const type of types){
+            if (lib[type].indexOf(key) >= 0) return type;
+          }
+  
+          return 'other';
+        }
+        return null;
+      }
+      function removeQuotes(str){
+        let r = str.match(/^\"([\s\S]*?)\"$/);
+        if (r) return r[1];
+        else return str;
+      }
+    }
+  }
+}
+
 /*
     'COMPU_METHOD',
     'RECORD_LAYOUT',
