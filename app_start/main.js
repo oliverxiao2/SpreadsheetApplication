@@ -49,6 +49,14 @@ class DSMer {
         });
     });
 
+    ipcMain.on('select-save-dir', (event, param) => {
+      dialog.showSaveDialog({
+        filters: [{name: 'DCM', extensions: ['dcm']}],
+      }, function (files) {
+        if (files) event.sender.send('selected-dir-to-save', files);
+      });
+    })
+
     ipcMain.on('open-hex', (event, param) => {
       dialog.showOpenDialog({
         properties: ['openFiles'],
