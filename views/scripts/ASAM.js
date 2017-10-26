@@ -865,4 +865,4 @@ const hex = new HEX(p2);
 b.hexData = hex;*/
 
 
-module.exports = {A2L, HEX};
+module.exports = {A2L, HEX, DCM};

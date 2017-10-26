@@ -32,7 +32,7 @@ var fs = require('fs'),
     os = require('os'),
     DSM = require('./parts/DSM/dsm'),
     chunk = require('./scripts/chunk'),
-    {A2L, HEX} = require('./scripts/ASAM');
+    {A2L, HEX, DCM} = require('./scripts/ASAM');
 
 window.AppNS = {};
 AppNS.datasets = {
@@ -8622,6 +8622,19 @@ ipcRenderer.on('selected-dir-to-save', function (event, param) {
     }
 })
 
+ipcRenderer.on('open-files-selected', function (event, param) {
+    for (const filepath of param) {
+        setTimeout(()=>{
+            const filename = path.basename(filepath);
+            const id = 'dataset-'+ performance.now().toString(16).replace('.', 'z');
+            const dcm = new DCM(filepath);
+            addToDatasetsPanel($('#datasets-panel-dcm-list'), id, filename, '', 'white-space:normal;');
+            addDataset(id, 'DCM', filename, dcm);
+        })
+    }
+    
+})
+
 var cardHtmlTemplate = 
     `<div class="insp-row" data-DID="@ID@" draggable="true" ondragstart="event.dataTransfer.setData('DID', '@ID@')">                                         
         <div class="chrome-download-item" onclick="$(event.target).toggleClass('selected')">
@@ -8727,7 +8740,7 @@ function dropSrcDesDropPanel (event) {
         .replace(/@ID@/g, dataset.id);
     if (dataset.type === 'A2LHEX') {
         htmlTemplate = htmlTemplate.replace(/@N1@/g, dataset.name[0]).replace(/@N2@/g, dataset.name[1]);
-    } else if (dataset.type === 'EXCEL') {
+    } else if (dataset.type === 'EXCEL' || dataset.type === 'DCM') {
         htmlTemplate = htmlTemplate.replace(/@N1@/g, dataset.name).replace(/@N2@/g, '').replace(/@STYLE@/,  'white-space:normal;');
     }
 
@@ -8900,7 +8913,12 @@ function attachToolbarItemEvents () {
     $('#ribbon-btn-import-a2l-hex').click(() => {ipcRenderer.send('open-a2l', 'single'); });
     // ***** Import - XML *****
     // ***** Import - DCM *****
-    $('#ribbon-btn-import-dcm').click()
+    $('#ribbon-btn-import-dcm').click(() => {
+        ipcRenderer.send('open-files', {
+            multiSelections: true,
+            filters: [{name: 'DCM', extensions: ['dcm']}]
+        })
+    })
     // ***** Import - EXCEL *****
     $('#ribbon-btn-import-excel').click(()=>{$('#input-file-excel').click();});
     $('#input-file-excel').change(function (e) {

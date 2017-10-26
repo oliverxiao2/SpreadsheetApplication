@@ -51,7 +51,7 @@ class DSMer {
 
     ipcMain.on('select-save-dir', (event, param) => {
       dialog.showSaveDialog({
-        filters: [{name: 'DCM', extensions: ['dcm']}],
+        filters: param.filters,
       }, function (files) {
         if (files) event.sender.send('selected-dir-to-save', files);
       });
@@ -66,6 +66,15 @@ class DSMer {
           else event.sender.send('cancel');
         });
     });
+
+    ipcMain.on('open-files', (event, param) => {
+      dialog.showOpenDialog({
+        properties: ['openFiles', param.multiSelections?'multiSelections':''],
+        filters: param.filters,
+      }, (files) => {
+        if (files) event.sender.send('open-files-selected', files);
+      })
+    })
 
     ipcMain.on('open-new-excel-window', (event, param) => {
       this.createExcelWindow(param);
