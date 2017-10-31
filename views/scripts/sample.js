@@ -8643,7 +8643,7 @@ var cardHtmlTemplate =
                 <span title="@N2@">@N2@</span>
             </div>
             <div class="chrome-download-item-btn">
-                <button onclick="$(event.target.parentElement.parentElement.parentElement).remove()">&#10005</button>
+                <button class="chrome-download-item-close-btn">&#10005</button>
             </div>
         </div>
     </div>`;
@@ -8655,6 +8655,10 @@ function addToDatasetsPanel (container, _id, _a, _h, _style='') {
         .replace(/@ID@/g, _id)
         .replace(/@STYLE@/, _style);
     container.prepend(htmlTemplate);
+    $('.chrome-download-item-close-btn').click(function() {
+        $(this.parentElement.parentElement.parentElement).remove();
+        removeDataset(_id);
+    })
     
     /*$('#'+_id+' button').click((e) => {
         $('#'+_id+ ' .chrome-download-item').css('opacity', 0);
@@ -8674,6 +8678,27 @@ function addDataset (_id, _type, _name, _data) {
         });
     }
 };
+
+function removeDataset (_id, panelIs) {
+    for (const [i, dataset] of AppNS.datasets.dock.entries()) {
+        if (dataset.id === _id) {
+            AppNS.datasets.dock.remove(i);
+            break;
+        }
+    }
+
+    if (panelIs === 'src') {
+        AppNS.sourceDataset = null;
+    } else if (panelIs === 'des') {
+        for (const [i, dataset] of AppNS.destinationDataset.entries()) {
+            if (dataset.id === _id) {
+                AppNS.destinationDataset.remove(i);
+                break;
+            }
+        }
+    }
+    
+}
 
 function toggleInspector () {
     if ($(".insp-container:visible").length > 0) {
@@ -8754,8 +8779,11 @@ function dropSrcDesDropPanel (event) {
     }
 
     $(target).find('.drop-panel-content .chrome-download-item').addClass('selected');
-   
-    
+
+    $(target).find('.chrome-download-item-close-btn').click(function() {
+        $(this.parentElement.parentElement.parentElement).remove();
+        removeDataset(id, panelIs);
+    })    
 };
 
 function whichActive ($group) {
@@ -9024,12 +9052,14 @@ function attachToolbarItemEvents () {
     // ***** Tab - Main End *****
     // ***** Tab - Data *****
     // ***** Show - System Constant *****
-    $('#ribbon-btn-add-sheet-of-System-Constant').click(() => {});
+    $('#ribbon-btn-add-sheet-of-System-Constant').click(() => {
+        const srcDataset = AppNS.sourceDataset;
+    });
     $('#ribbon-btn-add-sheet-of-DTC-list').click(() => {
         const srcDataset = AppNS.sourceDataset;
         const desDatasets= AppNS.destinationDataset;
         const is1788 = (srcDataset.name[0][0] === 'U');
-        if (!srcDataset || desDatasets.length === 0) return false;   
+        if (!srcDataset || desDatasets.length === 0) return false;
         
         if (srcDataset.type === 'A2LHEX') {
             const srcDFC = srcDataset.uniformedDFC || DSM.getDFCTable(srcDataset.data);
@@ -9117,6 +9147,51 @@ function attachToolbarItemEvents () {
             return '404';
         }
     });
+    $('#ribbon-btn-add-sheet-of-DTC-list-of-788').click(() => {
+        const filename = AppNS.sourceDataset.name[0];
+        const a2l = AppNS.sourceDataset.data;
+        const list = {};
+        const CHARs = a2l.CHARACTERISTIC;
+        const CLA = a2l.getCHAR(/^CLA/);
+        for (const item of CLA) {
+            const name = item.name.substr(3);
+            const desc = item.description;
+            const cla = parseInt(item.phyDec);
+            const cdc = CHARs['CDC' + name]
+            if (cdc) {
+                list[name + '-max'] = {
+                    name: name + ' - max',
+                    cdc: DSM.calcDTCO(parseInt(cdc.phyDec[0])),
+                    desc: desc,
+                }
+                list[name + '-min'] = {
+                    name: name + ' - min',
+                    cdc: DSM.calcDTCO(parseInt(cdc.phyDec[1])),
+                    desc: '',
+                }
+                list[name + '-sig'] = {
+                    name: name + ' - sig',
+                    cdc: DSM.calcDTCO(parseInt(cdc.phyDec[2])),
+                    desc: '',
+                }
+                list[name + '-npl'] = {
+                    name: name + ' - npl',
+                    cdc: DSM.calcDTCO(parseInt(cdc.phyDec[3])),
+                    desc: '',
+                }
+            }
+        }
+        const fields = [{
+            head: 'CDC',
+            prop: 'cdc',
+            width: 150,
+        },{
+            head: 'Class Description',
+            prop: 'desc',
+            width: 300,
+        }]
+        listDFCWorksheetInNewSheet('CDC List 788_'+filename, list, fields);
+    })
     // ***** Tab - Data End *****
 
     // 添加表格
@@ -9507,4 +9582,17 @@ function updateLabelCheckIconState () {
         $(g.join(',')).addClass('disabled');
     }
 };
+
+Array.prototype.remove=function(dx)
+　{
+　　if(isNaN(dx)||dx>this.length){return false;}
+　　for(var i=0,n=0;i<this.length;i++)
+　　{
+　　　　if(this[i]!=this[dx])
+　　　　{
+　　　　　　this[n++]=this[i]
+　　　　}
+　　}
+　　this.length-=1
+　}
 
