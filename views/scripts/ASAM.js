@@ -708,7 +708,7 @@ class HEX {
     function init (text) {
       const out = {dataBlock:{}};
       let lines = text.split(/\n/);
-      let len = 0, line, dataLine, currentBlock, dataByteCount, blockAddr, type, state = 'idle';
+      let len = 0, line, dataLine, currentBlock, dataByteCount, blockAddr, type, state = 'idle', nextIsFirstDataLine = false;
       for (const [i, _line_] of lines.entries()){
         line = _line_.trim();
         len = line.length;
@@ -719,11 +719,21 @@ class HEX {
   
         if (len == 15) {
           if (type == '04') {
-            if (out['dataBlock'][dataLine] == undefined) out['dataBlock'][dataLine] = '';
+            if (out['dataBlock'][dataLine] == undefined) {
+              // 初始化
+              out['dataBlock'][dataLine] = '';
+              nextIsFirstDataLine = true;
+            }
             currentBlock = dataLine;
             state = 'push';
           } else state = 'idle';         
         } else if (state == 'push'){
+          if (nextIsFirstDataLine) {
+            nextIsFirstDataLine = false;
+            for (let i = 0; i < parseInt('0x' + blockAddr); i++) {
+              out.dataBlock[currentBlock] += '--';
+            }
+          }
           out.dataBlock[currentBlock] += dataLine;
         }
       }
