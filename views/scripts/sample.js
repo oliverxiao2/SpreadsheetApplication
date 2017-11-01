@@ -8680,16 +8680,9 @@ function addDataset (_id, _type, _name, _data) {
 };
 
 function removeDataset (_id, panelIs) {
-    for (const [i, dataset] of AppNS.datasets.dock.entries()) {
-        if (dataset.id === _id) {
-            AppNS.datasets.dock.remove(i);
-            break;
-        }
-    }
-
-    if (panelIs === 'src') {
+    if (panelIs === 'src' || panelIs === 'datasets') {
         AppNS.sourceDataset = null;
-    } else if (panelIs === 'des') {
+    } else if (panelIs === 'des' || panelIs === 'datasets') {
         for (const [i, dataset] of AppNS.destinationDataset.entries()) {
             if (dataset.id === _id) {
                 AppNS.destinationDataset.remove(i);
@@ -8697,7 +8690,15 @@ function removeDataset (_id, panelIs) {
             }
         }
     }
-    
+
+    if (panelIs === 'datasets') {
+        for (const [i, dataset] of AppNS.datasets.dock.entries()) {
+            if (dataset.id === _id) {
+                AppNS.datasets.dock.remove(i);
+                break;
+            }
+        }
+    }    
 }
 
 function toggleInspector () {
@@ -8721,7 +8722,7 @@ function toggleInspector () {
         $(this).attr("title", uiResource.toolBar.hideInspector);
     }
     spread.refresh();
-};
+}
 
 function toggleDatasetsPanel () {
     const resPanel = $('#resource-container');
@@ -9356,8 +9357,6 @@ function exportCurrentSheetToDCM () {
         ipcRenderer.send('select-save-dir');
     }
 };
-
-
 
 function listDFCWorksheetInNewSheet (_sheetname, _DFCInfoList, fields) {
     const names = Object.keys(_DFCInfoList).sort();
