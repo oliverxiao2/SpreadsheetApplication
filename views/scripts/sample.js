@@ -8655,9 +8655,9 @@ function addToDatasetsPanel (container, _id, _a, _h, _style='') {
         .replace(/@ID@/g, _id)
         .replace(/@STYLE@/, _style);
     container.prepend(htmlTemplate);
-    $('.chrome-download-item-close-btn').click(function() {
+    container.find('.chrome-download-item-close-btn:first').click(function() {
         $(this.parentElement.parentElement.parentElement).remove();
-        removeDataset(_id);
+        removeDataset(_id, 'datasets');
     })
     
     /*$('#'+_id+' button').click((e) => {
@@ -8680,9 +8680,9 @@ function addDataset (_id, _type, _name, _data) {
 };
 
 function removeDataset (_id, panelIs) {
-    if (panelIs === 'src' || panelIs === 'datasets') {
+    if (panelIs === 'src' ) {
         AppNS.sourceDataset = null;
-    } else if (panelIs === 'des' || panelIs === 'datasets') {
+    } else if (panelIs === 'des') {
         for (const [i, dataset] of AppNS.destinationDataset.entries()) {
             if (dataset.id === _id) {
                 AppNS.destinationDataset.remove(i);
@@ -8697,6 +8697,11 @@ function removeDataset (_id, panelIs) {
                 AppNS.datasets.dock.remove(i);
                 break;
             }
+        }
+
+        if (AppNS.sourceDataset.id === _id) {
+            AppNS.sourceDataset = null;
+            
         }
     }    
 }
@@ -8835,92 +8840,215 @@ function runDatasetCheck () {
             srcDataset.DTCListSheet = sheet;
         }       
     } else if (action === 'Compare') {
-        $('#des-dataset-drop-panel').find('.chrome-download-item').each(function () {
-            if ($(this).hasClass('selected')) {
-                const datasetId = this.parentElement.getAttribute('data-did');
-                const dataset = AppNS.datasets.search(datasetId);
-                let sheet = srcDataset.DTCListSheet; 
-                const defaultLayout = {
-                    c1: 2,
-                    cCount: 7, 
-                    keyColumnIndex: 3,
-                    keyFromRow: 3,
-                    keyToRow: sheet.getRowCount()-3,
-                    fieldColumnIndex: {
-                        DTCO: 4,
-                        FaultTyp: 5,
-                        DFESCls: 6,
-                        CtlMsk: 7,
-                        DisblMsk: 8,
-                    },                           
-                };
+        let sheet = srcDataset.DTCListSheet;
+        
+        if (!sheet.bindCompareHandler) {
+            sheet.bind(spreadNS.Events.EditEnded, function (e, info) {
+                compare(info);
+            })
+        } else {
+        
+        }
 
-                let dd, layout, recordname = '', recordInDD, cell, cellVal;
-                layout = sheet.sheetLayout || defaultLayout;
-                sheet.sheetLayout = layout;
+        compare();
 
-                if (dataset.type === 'A2LHEX') {
-                    dd = DSM.getDFCTable(dataset.data);
+        function compare (info) {
+            $('#des-dataset-drop-panel').find('.chrome-download-item').each(function () {
+                if ($(this).hasClass('selected')) {
+                    const datasetId = this.parentElement.getAttribute('data-did');
+                    const dataset = AppNS.datasets.search(datasetId);
+                    
+                    const defaultLayout = {
+                        c1: 2,
+                        cCount: 7, 
+                        keyColumnIndex: 3,
+                        keyFromRow: 3,
+                        keyToRow: sheet.getRowCount()-3,
+                        fieldColumnIndex: {
+                            DTCO: 4,
+                            FaultTyp: 5,
+                            DFESCls: 6,
+                            CtlMsk: 7,
+                            DisblMsk: 8,
+                        },                           
+                    };
 
-                } else if (dataset.type === 'EXCEL') {
-                    dd = dataset.data[0];
-                }
+                    let dd, layout, recordname = '', recordInDD, cell, cellVal, rawValInDD, phyValInDD;
+                    layout = sheet.sheetLayout || defaultLayout;
+                    sheet.sheetLayout = layout;
 
-                if (sheet) {
-                    spread.suspendPaint();
-                    sheet.comments.clear();
-                    for (let i = layout.keyFromRow; i <= layout.keyToRow; i++) {
-                        recordname = sheet.getText(i, layout.keyColumnIndex).toUpperCase();
-                        recordInDD = dd[recordname]; 
-                        if (recordInDD) {
-                            for (const field in layout.fieldColumnIndex) {
-                                cell = sheet.getCell(i, layout.fieldColumnIndex[field]);
-                                cellVal = cell.text().toUpperCase();
-                                if (cellVal != (''+recordInDD[field]).toUpperCase()) {
-                                    sheet.comments.add(i, layout.fieldColumnIndex[field], dataset.name+'\n'+recordInDD[field]);
-                                    cell.foreColor('red');
-                                    sheet.setTag(i, layout.fieldColumnIndex[field],'Different');
-                                    cell.backColor('#ffcbc7');
-                                }
+                    if (dataset.type === 'A2LHEX') {
+                        dd = DSM.getDFCTable(dataset.data);
+                    } else if (dataset.type === 'EXCEL') {
+                        dd = dataset.data[0];
+                    } else if (dataset.type === 'DCM') {
+                        dd = dataset.data.FESTWERT;
+                    }
+
+                    if (sheet) {
+                        spread.suspendPaint();
+
+                        if (info) {
+                            cell = sheet.getCell(info.row, info.col);
+                            cellVal = cell.text();
+                            if (dataset.type === 'DCM') {
+                                recordname = cell.tag();
+                                recordInDD = dd[recordname];
+                                if (recordInDD){
+                                    rawValInDD = recordInDD.WERT;
+                                    if (recordname.match(/DTCO/)) {
+                                        phyValInDD = DSM.calcDTCO(parseInt(rawValInDD));
+                                    } else if (recordname.match(/Fault/)) {
+                                        phyValInDD = DSM.calcFaultTyp(parseInt(rawValInDD));
+                                    } else {
+                                        phyValInDD = '' + parseInt(rawValInDD);
+                                    }
+                                    if (cellVal != phyValInDD) {
+                                        sheet.comments.add(info.row, info.col, dataset.name + '\n' + phyValInDD);
+                                        cell.foreColor('red');
+                                        cell.backColor('#ffcbc7');                                       
+                                    } else {
+                                        cell.foreColor('green');
+                                        cell.backColor('#e3efda');
+                                        sheet.comments.remove(info.row, info.col);
+                                    }
+                                } else {
+                                    'Not Found in Desination Dataset';
+                                }                              
                             }
                         } else {
-                            'Not Found in Desination Dataset';
-                            sheet.getRange(i, layout.c1, 1, layout.cCount).backColor('#eeeeee');
+                            sheet.comments.clear();
+                            for (let i = layout.keyFromRow; i <= layout.keyToRow; i++) {
+                                if (dataset.type === 'DCM') {
+                                    for (const field in layout.fieldColumnIndex) {
+                                        cell = sheet.getCell(i, layout.fieldColumnIndex[field]);
+                                        cellVal = cell.text();
+                                        recordname = cell.tag();
+    
+                                        if (dd[recordname]) {                                   
+                                            rawValInDD = dd[recordname].WERT;                               
+                                            if (field === 'DTCO') {
+                                                phyValInDD = DSM.calcDTCO(parseInt(rawValInDD));
+                                            } else if (field === 'FaultTyp') {
+                                                phyValInDD = DSM.calcFaultTyp(parseInt(rawValInDD));
+                                            } 
+                                            else {
+                                                phyValInDD = '' + parseInt(rawValInDD);
+                                            }
+                                            if (cellVal != phyValInDD) {
+                                                sheet.comments.add(i, layout.fieldColumnIndex[field], dataset.name + '\n' + phyValInDD);
+                                                cell.foreColor('red');
+                                                //sheet.setTag(i, layout.fieldColumnIndex[field],'Different');
+                                                cell.backColor('#ffcbc7');                                       
+                                            } else {
+                                                cell.foreColor('green');
+                                                cell.backColor('#e3efda');
+                                            }
+                                        } else {
+                                            'Not Found in Desination Dataset';
+                                            sheet.getRange(i, layout.c1, 1, layout.cCount).backColor('#eeeeee');
+                                        }
+    
+                                    }
+                                } else {
+                                    recordname = sheet.getText(i, layout.keyColumnIndex).toUpperCase();
+                                    recordInDD = dd[recordname]; 
+                                    if (recordInDD) {
+                                        for (const field in layout.fieldColumnIndex) {
+                                            cell = sheet.getCell(i, layout.fieldColumnIndex[field]);
+                                            cellVal = cell.text().toUpperCase();
+                                            if (cellVal != (''+recordInDD[field]).toUpperCase()) {
+                                                sheet.comments.add(i, layout.fieldColumnIndex[field], dataset.name+'\n'+recordInDD[field]);
+                                                cell.foreColor('red');
+                                                //sheet.setTag(i, layout.fieldColumnIndex[field],'Different');
+                                                cell.backColor('#ffcbc7');
+                                            }
+                                        }
+                                    } else {
+                                        'Not Found in Desination Dataset';
+                                        sheet.getRange(i, layout.c1, 1, layout.cCount).backColor('#eeeeee');
+                                    }    
+                                }                                             
+                            }
                         }
-                        
-                    }
+                        spread.resumePaint();
+                    }               
+                }
+            })
 
-                    spread.resumePaint();
-                }               
+            if (!sheet.bindCompareHandler) {
+                sheet.bindCompareHandler = true;
             }
-        })
+        }
     } else if (action === 'Copy') {
         const sheet = spread.getActiveSheet();
-        const dd = AppNS.destinationDataset[0].data[0];
+        let dd;
         if (sheet.type === 'DFC List') {
-            let cell, layout = sheet.sheetLayout, recordname, fieldname; 
+            let cell, layout = sheet.sheetLayout, recordname, fieldname, recordInDD, rawValInDD, phyValInDD; 
             const selections = sheet.getSelections();
-
             spread.suspendPaint();
-            for (const selection of selections) {
-                for (let i=0; i<selection.rowCount; i++) {
-                    for (let j=0; j<selection.colCount; j++) {
-                        cell = sheet.getCell(selection.row+i, selection.col+j);
+
+            $('#des-dataset-drop-panel').find('.chrome-download-item:first').each(function () {
+                if ($(this).hasClass('selected')) {
+                    const datasetId = this.parentElement.getAttribute('data-did');
+                    const dataset = AppNS.datasets.search(datasetId);
     
-                        if (sheet.getTag(selection.row+i, selection.col+j) === 'Different') {
-                            recordname = sheet.getCell(selection.row+i, layout.keyColumnIndex).text();
-                            fieldname = getFieldnameByColumnIndex(layout.fieldColumnIndex, selection.col+j);
-                            if (dd[recordname] && dd[recordname][fieldname]) {
-                                cell.value(dd[recordname][fieldname]);
-                                cell.foreColor('black');
-                                cell.backColor('white');
-                                if (sheet.comments.get(selection.row+i, selection.col+j)) sheet.comments.remove(selection.row+i, selection.col+j);
-                            }   
+                    if (dataset.type === 'DCM') {
+                        dd = dataset.data.FESTWERT;
+
+                        for (const selection of selections) {
+                            for (let i=0; i<selection.rowCount; i++) {
+                                for (let j=0; j<selection.colCount; j++) {
+                                    cell = sheet.getCell(selection.row+i, selection.col+j);               
+                                    if (sheet.comments.get(selection.row+i, selection.col+j)) {
+                                        recordname = cell.tag();
+                                        recordInDD = dd[recordname];
+                                        if (recordInDD) {
+                                            rawValInDD = recordInDD.WERT;
+                                            if (recordname.match(/DTCO/)) {
+                                                phyValInDD = DSM.calcDTCO(parseInt(rawValInDD));
+                                            } else if (recordname.match(/FaultTyp/)) {
+                                                phyValInDD = DSM.calcFaultTyp(parseInt(rawValInDD));
+                                            } else {
+                                                phyValInDD = parseInt(rawValInDD);
+                                            }
+                                            
+                                            cell.value(phyValInDD);
+                                            cell.foreColor('green');
+                                            cell.backColor('#e3efda');
+                                            sheet.comments.remove(selection.row+i, selection.col+j);                                             
+                                        }                                       
+                                    }
+                                }
+                            }
                         }
+
+                    } else if (dataset.type === 'EXCEL') {
+                        dd = dataset.data[0];
+
+                        for (const selection of selections) {
+                            for (let i=0; i<selection.rowCount; i++) {
+                                for (let j=0; j<selection.colCount; j++) {
+                                    cell = sheet.getCell(selection.row+i, selection.col+j);               
+                                    if (sheet.comments.get(selection.row+i, selection.col+j)) {
+                                        recordname = sheet.getCell(selection.row+i, layout.keyColumnIndex).text().toUpperCase();
+                                        fieldname = getFieldnameByColumnIndex(layout.fieldColumnIndex, selection.col+j);
+                                        if (dd[recordname] && dd[recordname][fieldname]) {
+                                            cell.value(dd[recordname][fieldname]);
+                                            cell.foreColor('green');
+                                            cell.backColor('#e3efda');
+                                            if (sheet.comments.get(selection.row+i, selection.col+j)) sheet.comments.remove(selection.row+i, selection.col+j);
+                                        }   
+                                    }
+                                }
+                            }
+                        }
+
                     }
                 }
-            }
-            spread.resumePaint();        
+            });
+
+            spread.resumePaint(); 
         }
     }
 
@@ -8931,12 +9059,7 @@ function runDatasetCheck () {
     };
 };
 
-function cheboxBoxTypeBtnClickHandler (event, $btn) {
-    if (!$btn.hasClass('disabled')) $btn.toggleClass('active');
-};
-
 function attachToolbarItemEvents () {
-    const EVENTHANDLERS = require('./events/events');
     // ***** Tab - Main *****
     // ***** Import - A2L/HEX *****
     $('#ribbon-btn-import-a2l-hex').click(() => {ipcRenderer.send('open-a2l', 'single'); });
@@ -9301,6 +9424,10 @@ function attachToolbarItemEvents () {
         cheboxBoxTypeBtnClickHandler(event, $(this));
     });
 
+    function cheboxBoxTypeBtnClickHandler (event, $btn) {
+        if (!$btn.hasClass('disabled')) $btn.toggleClass('active');
+    };
+
     // license
     const license = require('./scripts/license.js');
     console.log(license);
@@ -9411,10 +9538,13 @@ function listDFCWorksheetInNewSheet (_sheetname, _DFCInfoList, fields) {
         for (const [j, field] of fields.entries()) {
             if (i === 0) sheet.setValue(startRow, startColumn+j+2, field.head);
             //sheet.setValue(startRow+1+i, startColumn+j+2, DFC[field.prop]);
-            //sheet.getCell(startRow+1+i, startColumn+j+2).value(DFC[field.prop]);
-            packDataRow.push((DFC[field.prop] != undefined)?DFC[field.prop]:'');
+            const cell =  sheet.getCell(startRow+1+i, startColumn+j+2);
+            cell.value(DFC[field.prop]);
+            cell.tag(DFC.labelnames[field.prop]);
+            //packDataRow.push((DFC[field.prop] != undefined)?DFC[field.prop]:'');
         }
 
+        /*
         packDataList.push(packDataRow);
         if (i % packLen === (packLen - 1) || i === (names.length -1)) {
             const duplicate = packDataList.concat();
@@ -9423,7 +9553,7 @@ function listDFCWorksheetInNewSheet (_sheetname, _DFCInfoList, fields) {
             }, 0);
             packDataList = [];
         } 
-        
+        */
     }
 
     // style
@@ -9463,7 +9593,9 @@ function listDFCWorksheetInNewSheet (_sheetname, _DFCInfoList, fields) {
             record = list[i];
 
             for (let j = 0; j < record.length; j++) {
-                sheet.getCell(startRow + i, startColumn + j).value(record[j]);
+                const cell = sheet.getCell(startRow + i, startColumn + j);
+                cell.value(record[j]);
+                
             }               
         }
 
