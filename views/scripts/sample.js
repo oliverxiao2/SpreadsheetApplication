@@ -8716,6 +8716,7 @@ function toggleInspector () {
         }
 
         $(this).attr("title", uiResource.toolBar.showInspector);
+        $(this).removeClass('active');
     } else {
         $(".insp-container").show();
         if (!_floatInspector) {
@@ -8725,6 +8726,7 @@ function toggleInspector () {
         }
 
         $(this).attr("title", uiResource.toolBar.hideInspector);
+        $(this).addClass('active');
     }
     spread.refresh();
 }
