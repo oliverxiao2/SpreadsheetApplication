@@ -50,15 +50,31 @@ function getDFCTable (_a2lDataset) {
                 DisblMsk: 0,
                 CtlMsk: 0,
                 DTCO: 'P0000',
-                FaultTyp: '00'
+                FaultTyp: '00',
+                labelnames: {},
             };
+
             recordname      = DFESCls.name.match(new RegExp(rule.prefix + '([\\w]+)' + rule.suffix))[1]
-            record.name     = recordname;            
+            record.name     = recordname; 
+            
+            const _disblMsk = getLabelOfDFCRelated(a, recordname, 'DisblMsk'),
+                  _ctlMsk   = getLabelOfDFCRelated(a, recordname, 'CtlMsk'),
+                  _DTCO     = getLabelOfDFCRelated(a, recordname, 'DTCO'),
+                  _faultTyp = getLabelOfDFCRelated(a, recordname, 'FaultTyp');
+
             record.DFESCls  = parseInt(DFESCls.phyDec);
-            record.DisblMsk = parseInt(getLabelOfDFCRelated(a, recordname, 'DisblMsk'));
-            record.CtlMsk   = parseInt(getLabelOfDFCRelated(a, recordname, 'CtlMsk'));
-            record.DTCO     = calcDTCO(parseInt(getLabelOfDFCRelated(a, recordname, 'DTCO')));
-            record.FaultTyp = calcFaultTyp(parseInt(getLabelOfDFCRelated(a, recordname, 'FaultTyp')));
+            record.DisblMsk = parseInt(_disblMsk.v);
+            record.CtlMsk   = parseInt(_ctlMsk.v);
+            record.DTCO     = calcDTCO(parseInt(_DTCO.v));
+            record.FaultTyp = calcFaultTyp(parseInt(_faultTyp.v));
+            record.labelnames = {
+                DFESCls: DFESCls.name,
+                DisblMsk: _disblMsk.k,
+                CtlMsk: _ctlMsk.k,
+                DTCO: _DTCO.k,
+                FaultTyp: _faultTyp.k,
+            }
+
             recordname      = recordname.toUpperCase();
             output[recordname]= record;
         }
@@ -72,12 +88,19 @@ function getLabelOfDFCRelated (a2l, _DFCname, _labelname) {
         const _CDLayout = a2l.getSC('DFC_CTLDISBLLAYOUT_SY');
     	if (_labelname === 'DisblMsk' && _CDLayout === 1) {
             const theChar = _allChars['DFC_DisblMsk2_C'];
-            if (theChar) return theChar.phyDec;       
+            if (theChar) return {
+                k: 'DFC_DisblMsk2_C',
+                v: theChar.phyDec,
+            }
         }
         
         for (const rule of DFCNamingRules[_labelname]) {
-            const theChar = _allChars[rule.prefix + _DFCname + rule.suffix];
-            if (theChar) return theChar.phyDec;           
+            const k = rule.prefix + _DFCname + rule.suffix;
+            const theChar = _allChars[k];
+            if (theChar) return {
+                k: k,
+                v: theChar.phyDec,
+            }
         }
         
         return;
@@ -121,11 +144,12 @@ function calcDTCO (int) {
 function calcFaultTyp (int) {
     if (int < 0x100 && int >= 0) {
         return (int+0x100).toString(16).substr(1).toUpperCase();
-    } else return '-';
+    } else return '--';
     
 };
 
 module.exports = {
     getDFCTable,
     calcDTCO,
+    calcFaultTyp,
 }
