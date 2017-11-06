@@ -32,7 +32,7 @@ var fs = require('fs'),
     os = require('os'),
     DSM = require('./parts/DSM/dsm'),
     chunk = require('./scripts/chunk'),
-    {A2L, HEX, DCM} = require('./scripts/ASAM');
+    {A2L, HEX, DCM, XML} = require('./scripts/ASAM');
 
 window.AppNS = {};
 AppNS.datasets = {
@@ -4549,7 +4549,7 @@ function attachSpreadEvents(rebind) {
             picture;
         var slicers = sheet.slicers.all();
         for (var item in slicers) {
-            slicers[item].isSelected(false);
+            //slicers[item].isSelected(false);
         }
 
         if (sheet.getSelections().length === 0) {
@@ -8625,11 +8625,19 @@ ipcRenderer.on('selected-dir-to-save', function (event, param) {
 ipcRenderer.on('open-files-selected', function (event, param) {
     for (const filepath of param) {
         setTimeout(()=>{
-            const filename = path.basename(filepath);
             const id = 'dataset-'+ performance.now().toString(16).replace('.', 'z');
-            const dcm = new DCM(filepath);
-            addToDatasetsPanel($('#datasets-panel-dcm-list'), id, filename, '', 'white-space:normal;');
-            addDataset(id, 'DCM', filename, dcm);
+            const filename = path.basename(filepath);
+            const extname = path.extname(filename).toUpperCase();
+            if (extname === '.DCM') {                
+                const dcm = new DCM(filepath);
+                addToDatasetsPanel($('#datasets-panel-dcm-list'), id, filename, '', 'white-space:normal;');
+                addDataset(id, 'DCM', filename, dcm);
+            } else if (extname === '.XML') {
+                const xml = XML(filepath);
+                addToDatasetsPanel($('#datasets-panel-xml-list'), id, filename, '', 'white-space:normal;');
+                addDataset(id, 'XML', filename, xml);
+            }
+            
         })
     }
     
@@ -8699,7 +8707,7 @@ function removeDataset (_id, panelIs) {
             }
         }
 
-        if (AppNS.sourceDataset.id === _id) {
+        if (AppNS.sourceDataset && AppNS.sourceDataset.id === _id) {
             AppNS.sourceDataset = null;
             
         }
@@ -8773,7 +8781,7 @@ function dropSrcDesDropPanel (event) {
         .replace(/@ID@/g, dataset.id);
     if (dataset.type === 'A2LHEX') {
         htmlTemplate = htmlTemplate.replace(/@N1@/g, dataset.name[0]).replace(/@N2@/g, dataset.name[1]);
-    } else if (dataset.type === 'EXCEL' || dataset.type === 'DCM') {
+    } else if (dataset.type === 'EXCEL' || dataset.type === 'DCM' || dataset.type === 'XML') {
         htmlTemplate = htmlTemplate.replace(/@N1@/g, dataset.name).replace(/@N2@/g, '').replace(/@STYLE@/,  'white-space:normal;');
     }
 
