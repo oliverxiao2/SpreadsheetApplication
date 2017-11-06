@@ -150,7 +150,7 @@
                 </div>
             </div>
 
-             <div class="ribbon-section">
+             <div class="ribbon-section" style="display:none;">
                 <span class="section-title">Labels Configuration</span>
                 <div class="ribbon-button ribbon-button-large disabled" id="ribbon-btn-label-dfc-list">
                     <span class="button-title">DFC List</span>
@@ -200,26 +200,18 @@
             </div>
 
             <div class="ribbon-section">
-                <span class="section-title">Configuration</span>
-                <div class="ribbon-button ribbon-button-large" id="ribbon-btn-show-dfc-list">
-                    <span class="button-title">FUN</span>
+                <span class="section-title">Show more...</span>
+                <!--
+                <div class="ribbon-button ribbon-button-large" id="ribbon-btn-show-sys-const">
+                    <span class="button-title">系统常数</span>
                     <span class="button-help"></span>
-                    <span class="ribbon-icon ribbon-normal icon-dcm"></span>
+                    <span class="ribbon-icon ribbon-normal icon-item"></span>
                 </div>
-                <div class="ribbon-button ribbon-button-large" id="ribbon-btn-show-dfc-list">
-                    <span class="button-title">Compare</span>
+                -->
+                <div class="ribbon-button ribbon-button-large" id="ribbon-btn-show-dsm-xml">
+                    <span class="button-title">dsm export XML</span>
                     <span class="button-help"></span>
-                    <span class="ribbon-icon ribbon-normal icon-dcm"></span>
-                </div>
-                <div class="ribbon-button ribbon-button-large" id="ribbon-btn-show-dfc-list">
-                    <span class="button-title">Copy</span>
-                    <span class="button-help"></span>
-                    <span class="ribbon-icon ribbon-normal icon-dcm"></span>
-                </div>
-                <div class="ribbon-button ribbon-button-large" id="ribbon-btn-show-dfc-list">
-                    <span class="button-title">Run</span>
-                    <span class="button-help"></span>
-                    <span class="ribbon-icon ribbon-normal icon-dcm"></span>
+                    <span class="ribbon-icon ribbon-normal icon-item"></span>
                 </div>
             </div>
 
@@ -325,7 +317,7 @@
             <!--<li class="insp-cate-tab active">
                 <a href="#dir-tree-panel" data-toggle="tab" class="localize" id="tab-directory">Directory</a>
             </li>-->
-            <li class="insp-cate-tab">
+            <li class="insp-cate-tab active">
                 <a href="#datasets-panel" data-toggle="tab" class="localize" id="tab-datasets">Datasets</a>
             </li>
         </ul>
@@ -356,6 +348,17 @@
                             </span>
                         </div>
                         <div class="insp-group-content" id="datasets-panel-dcm-list">                                   
+                            <div class="group-item-divider"></div>
+                        </div>
+                    </div>
+                    <div class="insp-group expanded">
+                        <div class="insp-group-title">
+                            <span>
+                                <span class="group-state fa"></span>
+                                <span class="group-text">XML</span>
+                            </span>
+                        </div>
+                        <div class="insp-group-content" id="datasets-panel-xml-list">                                   
                             <div class="group-item-divider"></div>
                         </div>
                     </div>
