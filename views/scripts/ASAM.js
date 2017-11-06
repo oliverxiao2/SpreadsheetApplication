@@ -851,6 +851,95 @@ class DCM {
   }
 }
 
+function XML (xmlFilePath) {
+  const fs = require('fs')
+  const txt = fs.readFileSync(xmlFilePath, {encoding: 'utf-8'});
+  let $DOMParser = new DOMParser;
+  out = {
+    xml: $DOMParser.parseFromString(txt, 'application/xml'),
+    getDFCs: function(){
+      const output = {};
+      const xml = this.xml;
+      const DFCSNode = xml.querySelector('DSM-DFCS');
+
+      const _DFCs = this.DSMNodeToObj(DFCSNode);
+      let _DFC;
+      for (const item of _DFCs['DSM-DFCS']) {
+        _DFC = item['DSM-DFC'];
+        output[_DFC['SHORT-NAME'].substr(4)] = _DFC;
+      }
+
+      return output;
+    },
+    DSMNodeToObj: function (node){
+      const output = {};
+      recursion(node, output);
+      return output;
+      function recursion(node, parent) {
+        let tag, val, childrenCount;
+
+        tag = node.tagName;
+
+        if (node.children.length === 0) {            
+          val = node.textContent;
+
+          parent[tag] = val;
+        } else {
+          childrenCount = node.children.length;
+
+          if (childrenCount > 1 && node.children[0].tagName === node.children[1].tagName) {
+            parent[tag] = [];
+
+             for (let i = 0; i < childrenCount; i++) {
+              parent[tag][i] = {};
+              recursion(node.children[i], parent[tag][i]);
+            }
+          } else {
+            parent[tag] = {};
+
+            for (const child of node.children) {
+              recursion(child, parent[tag]);
+            }
+          }
+        }
+      }
+    },
+    getAll: function () {
+      const _t = [
+        'DSM-DFCS',
+        'DSM-DSQS',
+        'DSM-DFPS',
+        'DSM-FIDS',
+        'DSM-FIDS-SCHEDULED',
+        'DSM-FIDS-IUMPR',
+        'DSM-TRIGGERS',
+        'DSM-DTRS',
+        'DSM-CLASSES',
+        'DSM-ENV-INFO',
+        'DSM-PARAM-LISTS',
+        'DSM-COMPU-METHODS',
+        'DSM-CONF',
+        'DSM-STANDARD-CONFIG',
+        'DSM-DTR-SIZE',
+        'DSM-RDY-CONF-LSTS',
+        'DSM-LABEL-DEFAULT-VALUES',
+        'DSM-SYSCONST-INPUTS',
+        'DSM-FLT-CLASS-PARAMETERS',
+      ];
+      let parentNode, output = {};
+      for (const nodename of _t) {
+        parentNode = this.xml.querySelector(nodename);
+        if (parentNode) output[nodename] = (this.DSMNodeToObj(parentNode));
+        else console.log('not found' + nodename);
+      }
+
+      return output;
+    },
+  }
+
+  return out;
+}
+
 /*
     'COMPU_METHOD',
     'RECORD_LAYOUT',
@@ -875,4 +964,5 @@ const hex = new HEX(p2);
 b.hexData = hex;*/
 
 
-module.exports = {A2L, HEX, DCM};
+
+module.exports = {A2L, HEX, DCM, XML};
