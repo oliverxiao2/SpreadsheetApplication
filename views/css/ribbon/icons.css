@@ -13,6 +13,9 @@
 .icon-dcm {
 	background: url('./icons/normal/dcm.png') no-repeat center center;
 }
+.icon-item {
+	background: url('./icons/normal/template.png') no-repeat center center;
+}
 .icon-toggle-side-panel {
 	background: url('./icons/normal/side-panel.png') no-repeat center center;
 }
