@@ -51,7 +51,7 @@ class DSMer {
 
     ipcMain.on('select-save-dir', (event, param) => {
       dialog.showSaveDialog({
-        filters: param.filters,
+        filters: param?param.filters:[],
       }, function (files) {
         if (files) event.sender.send('selected-dir-to-save', files);
       });
@@ -70,7 +70,7 @@ class DSMer {
     ipcMain.on('open-files', (event, param) => {
       dialog.showOpenDialog({
         properties: ['openFiles', param.multiSelections?'multiSelections':''],
-        filters: param.filters,
+        filters: param?param.filters:[],
       }, (files) => {
         if (files) event.sender.send('open-files-selected', files);
       })

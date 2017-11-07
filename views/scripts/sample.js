@@ -9491,7 +9491,12 @@ function exportCurrentSheetToDCM () {
             }
         }
         AppNS.readyToWrite = a2l.exportDSMInfoToDCM(out);       
-        ipcRenderer.send('select-save-dir');
+        ipcRenderer.send('select-save-dir', {
+            filters: [{
+                name: 'DCM',
+                extensions: ['dcm'],
+            }]
+        });
     }
 };
 
