@@ -8898,7 +8898,20 @@ function runDatasetCheck () {
 
                     if (sheet) {
                         spread.suspendPaint();
+                        let checkStartRow, checkEndRow, checkColRange, j;
 
+                        if (info) {
+                            checkStartRow = info.row;
+                            checkEndRow = info.row;
+                            checkColRange = [info.col];
+                        } else {
+                            checkStartRow = layout.keyFromRow;
+                            checkEndRow = layout.keyToRow;
+                            checkColRange = Object.keys(layout.fieldColumnIndex).map((field) => {return layout.fieldColumnIndex[field]})
+                            sheet.comments.clear();
+                        }
+
+                        /*
                         if (info) {
                             cell = sheet.getCell(info.row, info.col);
                             cellVal = cell.text();
@@ -8926,34 +8939,37 @@ function runDatasetCheck () {
                                 } else {
                                     'Not Found in Desination Dataset';
                                 }                              
+                            } else if (dataset.type === 'EXCEL') {
+
                             }
                         } else {
-                            sheet.comments.clear();
-                            for (let i = layout.keyFromRow; i <= layout.keyToRow; i++) {
+                            sheet.comments.clear();*/
+                            for (let i = checkStartRow; i <= checkEndRow; i++) {
                                 if (dataset.type === 'DCM') {
                                     for (const field in layout.fieldColumnIndex) {
-                                        cell = sheet.getCell(i, layout.fieldColumnIndex[field]);
+                                        j = layout.fieldColumnIndex[field];
+                                        cell = sheet.getCell(i, j);
                                         cellVal = cell.text();
                                         recordname = cell.tag();
     
-                                        if (dd[recordname]) {                                   
-                                            rawValInDD = dd[recordname].WERT;                               
-                                            if (field === 'DTCO') {
+                                        if (dd[recordname]) {                                          
+                                            rawValInDD = dd[recordname].WERT;
+                                            if (recordname.match(/DTCO/)) {
                                                 phyValInDD = DSM.calcDTCO(parseInt(rawValInDD));
-                                            } else if (field === 'FaultTyp') {
+                                            } else if (recordname.match(/FaultTyp/)) {
                                                 phyValInDD = DSM.calcFaultTyp(parseInt(rawValInDD));
                                             } 
                                             else {
                                                 phyValInDD = '' + parseInt(rawValInDD);
-                                            }
+                                            }                                            
                                             if (cellVal != phyValInDD) {
-                                                sheet.comments.add(i, layout.fieldColumnIndex[field], dataset.name + '\n' + phyValInDD);
+                                                sheet.comments.add(i, j, dataset.name + '\n' + phyValInDD);
                                                 cell.foreColor('red');
-                                                //sheet.setTag(i, layout.fieldColumnIndex[field],'Different');
-                                                cell.backColor('#ffcbc7');                                       
+                                                cell.backColor('#ffcbc7');                                    
                                             } else {
                                                 cell.foreColor('green');
                                                 cell.backColor('#e3efda');
+                                                sheet.comments.remove(i, j);
                                             }
                                         } else {
                                             'Not Found in Desination Dataset';
@@ -8961,27 +8977,31 @@ function runDatasetCheck () {
                                         }
     
                                     }
-                                } else {
+                                } else if (dataset.type === 'EXCEL') {
                                     recordname = sheet.getText(i, layout.keyColumnIndex).toUpperCase();
                                     recordInDD = dd[recordname]; 
                                     if (recordInDD) {
                                         for (const field in layout.fieldColumnIndex) {
-                                            cell = sheet.getCell(i, layout.fieldColumnIndex[field]);
+                                            j = layout.fieldColumnIndex[field];
+                                            cell = sheet.getCell(i, j);
                                             cellVal = cell.text().toUpperCase();
                                             if (cellVal != (''+recordInDD[field]).toUpperCase()) {
                                                 sheet.comments.add(i, layout.fieldColumnIndex[field], dataset.name+'\n'+recordInDD[field]);
                                                 cell.foreColor('red');
-                                                //sheet.setTag(i, layout.fieldColumnIndex[field],'Different');
                                                 cell.backColor('#ffcbc7');
+                                            } else {
+                                                cell.foreColor('green');
+                                                cell.backColor('#e3efda');
+                                                sheet.comments.remove(i, j);
                                             }
                                         }
                                     } else {
                                         'Not Found in Desination Dataset';
                                         sheet.getRange(i, layout.c1, 1, layout.cCount).backColor('#eeeeee');
                                     }    
-                                }                                             
+                                }                                         
                             }
-                        }
+                        //}
                         spread.resumePaint();
                     }               
                 }
