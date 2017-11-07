@@ -10,6 +10,9 @@ const DFCNamingRules = {
     DisblMsk: [{
         prefix: 'DFC_DisblMsk.DFC_',
         suffix: '_C'
+    },{
+        prefix: 'DFC_DisblMsk2.DFC_',
+        suffix: '_C'
     }],
     CtlMsk: [{
         prefix: 'DFC_CtlMsk.DFC_',
