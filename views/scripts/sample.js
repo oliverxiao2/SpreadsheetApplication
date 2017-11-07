@@ -9088,7 +9088,8 @@ function attachToolbarItemEvents () {
         excelIO.open(file, function (json) {
             //spread.fromJSON(json);
             console.log(json);
-            const listOfDFCTable = excelToDFCTable(json); 
+            const listOfDFCTable = excelToDFCTable(json);
+            console.log(listOfDFCTable);
             const id = 'dataset-'+ performance.now().toString(16).replace('.', 'z');
             addToDatasetsPanel($('#datasets-panel-excel-list'), id, file.name, '', 'white-space:normal;');
             addDataset(id, 'EXCEL', file.name, listOfDFCTable);
@@ -9120,6 +9121,7 @@ function attachToolbarItemEvents () {
                 if (sheetname.match(/Evaluation/i)) continue;
 
                 const sheetData = json.sheets[sheetname].data.dataTable;
+                if (!sheetData) continue;
                 const rows = Object.keys(sheetData).sort();
                 const rowCount = rows.length;
         
