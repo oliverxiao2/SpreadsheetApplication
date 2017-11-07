@@ -8855,6 +8855,7 @@ function runDatasetCheck () {
         if (!sheet.bindCompareHandler) {
             sheet.bind(spreadNS.Events.EditEnded, function (e, info) {
                 compare(info);
+                console.log(info);
             })
         } else {
         
@@ -9043,7 +9044,7 @@ function runDatasetCheck () {
                                     if (sheet.comments.get(selection.row+i, selection.col+j)) {
                                         recordname = sheet.getCell(selection.row+i, layout.keyColumnIndex).text().toUpperCase();
                                         fieldname = getFieldnameByColumnIndex(layout.fieldColumnIndex, selection.col+j);
-                                        if (dd[recordname] && dd[recordname][fieldname]) {
+                                        if (dd[recordname] && (!(dd[recordname][fieldname] === ''))) {
                                             cell.value(dd[recordname][fieldname]);
                                             cell.foreColor('green');
                                             cell.backColor('#e3efda');
